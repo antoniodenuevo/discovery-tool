@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import CardGrid from './components/CardGrid/CardGrid';
 import CardPreviewModal from './components/Card/CardPreviewModal';
 import cardsData from './data/cardsData';
@@ -18,129 +18,188 @@ import {
   FILTER_LETTER_SPACING
 } from './constants';
 
-// Helper: return a random number in [min, max]
+// Shared button style
+const buttonBaseStyle = {
+  display: 'flex',
+  padding: '14px 16px 12px 16px',
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderRadius: 12,
+  cursor: 'pointer',
+  fontFamily: FILTER_FONT_FAMILY,
+  fontSize: `${FILTER_FONT_SIZE}px`,
+  fontWeight: FILTER_FONT_WEIGHT,
+  lineHeight: FILTER_LINE_HEIGHT,
+  letterSpacing: FILTER_LETTER_SPACING,
+  textTransform: 'uppercase',
+  color: 'rgba(0, 0, 0, 1)',
+};
+
+// Helper for jitter
 function randomBetween(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-// Compute initial positions, then apply a small random offset (“jitter”)
+// Initial positions with jitter
 function computeInitialPositions() {
   const positions = {};
-  const R = 200; // jitter radius in pixels
-
+  const R = 200;
   cardsData.forEach((card, idx) => {
     const col = idx % COLUMNS;
     const row = Math.floor(idx / COLUMNS);
-
-    // Base grid‐aligned coordinates:
-    const baseX = col * (CARD_WIDTH + GAP) + GAP;
-    const baseY = row * (CARD_HEIGHT + GAP) + GAP;
-
-    // Apply jitter in [–R, +R]
-    const jitterX = randomBetween(-R, R);
-    const jitterY = randomBetween(-R, R);
-
+    const baseX = col * (CARD_WIDTH + GAP);
+    const baseY = row * (CARD_HEIGHT + GAP);
     positions[card.id] = {
-      x: baseX + jitterX,
-      y: baseY + jitterY
+      x: baseX + randomBetween(-R, R),
+      y: baseY + randomBetween(-R, R),
     };
   });
-
   return positions;
 }
 
 export default function App() {
-  const [positions, setPositions] = useState(() => computeInitialPositions());
+  const [rawPositions, setRawPositions] = useState(() => computeInitialPositions());
   const [activeFilter, setActiveFilter] = useState('all');
-  const [previewCardId, setPreviewCardId] = useState(null);
+  const [selectedCardId, setSelectedCardId] = useState(null);
+  const [previewCardId, setPreviewCardId] = useState(null);              // ← preview state
+  const [zoom, setZoom] = useState(1);
+  const viewportRef = useRef(null);
 
-  const handleDrag = (id, newX, newY) => {
-    setPositions((prev) => ({
-      ...prev,
-      [id]: { x: newX, y: newY }
-    }));
+  const handleDrag = (id, x, y) => {
+    setRawPositions(prev => ({ ...prev, [id]: { x, y } }));
   };
 
+  // Map id → tags
   const tagsMap = {};
-  cardsData.forEach((card) => {
-    tagsMap[card.id] = card.tags;
-  });
+  cardsData.forEach(c => (tagsMap[c.id] = c.tags));
 
-  const visiblePositions = {};
-  Object.entries(positions).forEach(([id, pos]) => {
-    if (
-      activeFilter === 'all' ||
-      (tagsMap[id] && tagsMap[id].includes(activeFilter))
-    ) {
-      visiblePositions[id] = pos;
+  // Filtered IDs
+  const filteredIds = new Set(
+    Object.entries(tagsMap)
+      .filter(([id, tags]) => activeFilter === 'all' || tags.includes(activeFilter))
+      .map(([id]) => id)
+  );
+
+  // Connected IDs when one is selected
+  const connectedIds = new Set();
+  if (selectedCardId) {
+    const selTags = tagsMap[selectedCardId] || [];
+    Object.entries(tagsMap).forEach(([id, tags]) => {
+      if (id === selectedCardId || selTags.some(t => tags.includes(t))) {
+        connectedIds.add(id);
+      }
+    });
+  }
+
+  // Which to show
+  const visibleRawIds = Object.keys(rawPositions).filter(
+    id => filteredIds.has(id) && (!selectedCardId || connectedIds.has(id))
+  );
+
+  // Compute bounds + padding
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  Object.values(rawPositions).forEach(({ x, y }) => {
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  });
+  maxX += CARD_WIDTH; maxY += CARD_HEIGHT;
+  const PADDING = 200;
+  const offsetX = PADDING - Math.min(minX, 0);
+  const offsetY = PADDING - Math.min(minY, 0);
+  const worldWidth = (maxX - minX + PADDING * 2) * zoom;
+  const worldHeight = (maxY - minY + PADDING * 2) * zoom;
+
+  // Zoom handler (cmd/ctrl + wheel)
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    function onWheel(e) {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      e.preventDefault(); e.stopPropagation();
+      const sf = e.deltaY < 0 ? 1.03 : 0.97;
+      setZoom(prev => {
+        const next = Math.min(3, Math.max(0.25, prev * sf));
+        const { clientWidth, clientHeight, scrollLeft, scrollTop } = el;
+        const cx = (scrollLeft + clientWidth/2) / prev;
+        const cy = (scrollTop + clientHeight/2) / prev;
+        requestAnimationFrame(() => {
+          el.scrollLeft = cx * next - clientWidth/2;
+          el.scrollTop  = cy * next - clientHeight/2;
+        });
+        return next;
+      });
     }
-  });
-
-  const navWrapperStyle = {
-    position: 'fixed',
-    top: 0,
-    left: '50%',
-    transform: 'translateX(-50%)',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '24px',
-    zIndex: 1000
-  };
-
-  const buttonBaseStyle = {
-    display: 'flex',
-    padding: '14px 16px 12px 16px',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: '12px',
-    cursor: 'pointer',
-    fontFamily: FILTER_FONT_FAMILY,
-    fontSize: '20px',
-    fontWeight: FILTER_FONT_WEIGHT,
-    lineHeight: FILTER_LINE_HEIGHT,
-    letterSpacing: FILTER_LETTER_SPACING,
-    textTransform: 'uppercase',
-    color: 'rgba(0, 0, 0, 1)'
-  };
+    el.addEventListener('wheel', onWheel, { passive: false, capture: true });
+    return () => el.removeEventListener('wheel', onWheel, { passive: false, capture: true });
+  }, [zoom]);
 
   return (
     <div>
-      <div style={navWrapperStyle}>
+      {/* Filter nav */}
+      <div style={{
+        position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
+        display: 'inline-flex', alignItems: 'center', gap: 12, padding: 24,
+        zIndex: 1000, background: 'transparent'
+      }}>
         <div
-          onClick={() => setActiveFilter('all')}
+          onClick={() => {
+            setActiveFilter('all');
+            setSelectedCardId(null);
+            setPreviewCardId(null);
+          }}
           style={{
             ...buttonBaseStyle,
             backgroundColor: '#ffffff',
             opacity: activeFilter === 'all' ? 1 : 0.6
           }}
-        >
-          ALL
-        </div>
-        {FILTER_KEYS.map((key) => (
+        >ALL</div>
+        {FILTER_KEYS.map(k => (
           <div
-            key={key}
-            onClick={() => setActiveFilter(key)}
+            key={k}
+            onClick={() => {
+              setActiveFilter(k);
+              setSelectedCardId(null);
+              setPreviewCardId(null);
+            }}
             style={{
               ...buttonBaseStyle,
-              backgroundColor: FILTER_COLORS[key],
-              opacity: activeFilter === key || activeFilter === 'all' ? 1 : 0.6
+              backgroundColor: FILTER_COLORS[k],
+              opacity: activeFilter === k || activeFilter === 'all' ? 1 : 0.6
             }}
-          >
-            {FILTER_LABELS[key].toUpperCase()}
-          </div>
+          >{FILTER_LABELS[k].toUpperCase()}</div>
         ))}
       </div>
 
-      <div style={{ paddingTop: '80px' }}>
-        <CardGrid
-          positions={visiblePositions}
-          onDrag={handleDrag}
-          activeFilter={activeFilter}
-          onCardClick={(id) => setPreviewCardId(id)}
-        />
+      {/* Scrollable world */}
+      <div
+        ref={viewportRef}
+        style={{
+          paddingTop: '80px',
+          width: '100vw',
+          height: 'calc(100vh - 80px)',
+          overflow: 'auto',
+          overscrollBehavior: 'none'
+        }}
+      >
+        <div style={{ width: worldWidth, height: worldHeight, position: 'relative' }}>
+          <CardGrid
+            rawPositions={rawPositions}
+            visibleIds={visibleRawIds}
+            onDrag={handleDrag}
+            selectedCardId={selectedCardId}
+            onCardClick={id => setSelectedCardId(prev => (prev === id ? null : id))}
+            onTitleClick={id => setPreviewCardId(id)}      // ← hooked up here
+            offsetX={offsetX}
+            offsetY={offsetY}
+            zoom={zoom}
+            activeFilter={activeFilter}
+          />
+        </div>
       </div>
 
+      {/* Preview modal */}
       {previewCardId && (
         <CardPreviewModal
           id={previewCardId}

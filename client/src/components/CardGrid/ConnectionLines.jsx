@@ -3,7 +3,13 @@ import React, { useMemo } from 'react';
 import cardsData from '../../data/cardsData';
 import { CARD_WIDTH, CARD_HEIGHT, FILTER_COLORS } from '../../constants';
 
-export default function ConnectionLines({ positions, activeFilter }) {
+export default function ConnectionLines({
+  positions,         // adjustedPositions: only visible cards
+  selectedCardId,
+  activeFilter,
+  zoom
+}) {
+  // Build a quick lookup of tags for each card
   const tagsMap = useMemo(() => {
     const map = {};
     cardsData.forEach((card) => {
@@ -20,35 +26,43 @@ export default function ConnectionLines({ positions, activeFilter }) {
       for (let j = i + 1; j < ids.length; j++) {
         const idA = ids[i];
         const idB = ids[j];
+
         const tagsA = tagsMap[idA] || [];
         const tagsB = tagsMap[idB] || [];
+        // Check for shared tag
+        const sharedTag = tagsA.find((t) => tagsB.includes(t));
+        if (!sharedTag) continue;
 
-        let color = null;
+        // Enforce active filter
+        if (activeFilter !== 'all' && sharedTag !== activeFilter) continue;
 
-        if (activeFilter === 'all') {
-          const commonTag = tagsA.find((tag) => tagsB.includes(tag));
-          if (commonTag) color = FILTER_COLORS[commonTag];
-        } else {
-          if (tagsA.includes(activeFilter) && tagsB.includes(activeFilter)) {
-            color = FILTER_COLORS[activeFilter];
-          }
+        // If a card is selected, only draw lines involving that card
+        if (
+          selectedCardId &&
+          idA !== selectedCardId &&
+          idB !== selectedCardId
+        ) {
+          continue;
         }
 
-        if (color) {
-          const posA = positions[idA];
-          const posB = positions[idB];
+        const posA = positions[idA];
+        const posB = positions[idB];
+        const cxA = posA.x + (CARD_WIDTH * zoom) / 2;
+        const cyA = posA.y + (CARD_HEIGHT * zoom) / 2;
+        const cxB = posB.x + (CARD_WIDTH * zoom) / 2;
+        const cyB = posB.y + (CARD_HEIGHT * zoom) / 2;
 
-          const cxA = posA.x + CARD_WIDTH / 2;
-          const cyA = posA.y + CARD_HEIGHT / 2;
-          const cxB = posB.x + CARD_WIDTH / 2;
-          const cyB = posB.y + CARD_HEIGHT / 2;
-
-          result.push({ x1: cxA, y1: cyA, x2: cxB, y2: cyB, color });
-        }
+        result.push({
+          x1: cxA,
+          y1: cyA,
+          x2: cxB,
+          y2: cyB,
+          color: FILTER_COLORS[sharedTag]
+        });
       }
     }
     return result;
-  }, [positions, tagsMap, activeFilter]);
+  }, [positions, tagsMap, selectedCardId, activeFilter, zoom]);
 
   return (
     <svg
@@ -58,19 +72,18 @@ export default function ConnectionLines({ positions, activeFilter }) {
         left: 0,
         width: '100%',
         height: '100%',
-        pointerEvents: 'none',
-        overflow: 'visible'
+        pointerEvents: 'none'
       }}
     >
-      {lines.map((ln, idx) => (
+      {lines.map((line, idx) => (
         <line
           key={idx}
-          x1={ln.x1}
-          y1={ln.y1}
-          x2={ln.x2}
-          y2={ln.y2}
-          stroke={ln.color}
-          strokeWidth="4"
+          x1={line.x1}
+          y1={line.y1}
+          x2={line.x2}
+          y2={line.y2}
+          stroke={line.color}
+          strokeWidth={4 * zoom}
         />
       ))}
     </svg>

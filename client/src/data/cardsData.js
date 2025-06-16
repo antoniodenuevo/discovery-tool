@@ -170,36 +170,36 @@ const cardsData = [
         heading: 'Card 17 Title',
         text: 'This is a brief preview text for Card 17.'
       }
-    // },
-    // {
-    //   id: 'card18',
-    //   tags: ['filter2', 'filter4'],
-    //   image:
-    //     'https://media.tate.org.uk/aztate-prd-ew-dg-wgtail-st1-ctr-data/images/.width-1200_ZvZPxEB.jpg',
-    //   preview: {
-    //     heading: 'Card 18 Title',
-    //     text: 'This is a brief preview text for Card 18.'
-    //   }
-    // },
-    // {
-    //   id: 'card19',
-    //   tags: ['filter3'],
-    //   image:
-    //     'https://media.tate.org.uk/aztate-prd-ew-dg-wgtail-st1-ctr-data/images/.width-1200_5CG3hTJ.jpg',
-    //   preview: {
-    //     heading: 'Card 19 Title',
-    //     text: 'This is a brief preview text for Card 19.'
-    //   }
-    // },
-    // {
-    //   id: 'card20',
-    //   tags: ['filter1', 'filter3', 'filter4'],
-    //   image:
-    //     'https://media.tate.org.uk/aztate-prd-ew-dg-wgtail-st1-ctr-data/images/.format-avif.width-800.max-1200x1200.avif',
-    //   preview: {
-    //     heading: 'Card 20 Title',
-    //     text: 'This is a brief preview text for Card 20.'
-    //   }
+    },
+    {
+      id: 'card18',
+      tags: ['filter2', 'filter4'],
+      image:
+        'https://media.tate.org.uk/aztate-prd-ew-dg-wgtail-st1-ctr-data/images/.width-1200_ZvZPxEB.jpg',
+      preview: {
+        heading: 'Card 18 Title',
+        text: 'This is a brief preview text for Card 18.'
+      }
+    },
+    {
+      id: 'card19',
+      tags: ['filter3'],
+      image:
+        'https://media.tate.org.uk/aztate-prd-ew-dg-wgtail-st1-ctr-data/images/.width-1200_5CG3hTJ.jpg',
+      preview: {
+        heading: 'Card 19 Title',
+        text: 'This is a brief preview text for Card 19.'
+      }
+    },
+    {
+      id: 'card20',
+      tags: ['filter1', 'filter3', 'filter4'],
+      image:
+        'https://media.tate.org.uk/aztate-prd-ew-dg-wgtail-st1-ctr-data/images/.format-avif.width-800.max-1200x1200.avif',
+      preview: {
+        heading: 'Card 20 Title',
+        text: 'This is a brief preview text for Card 20.'
+      }
     // },
     // {
     //   id: 'card21',
