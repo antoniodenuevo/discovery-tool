@@ -1,8 +1,8 @@
 // src/constants.js
 export const CARD_WIDTH = 400;
 export const CARD_HEIGHT = 218;
-export const GAP = 800;
-export const COLUMNS = 4;
+export const GAP = 400;
+export const COLUMNS = 5;
 
 // ----- Filters: keys & display labels -----
 export const FILTER_KEYS = ['filter1', 'filter2', 'filter3', 'filter4'];

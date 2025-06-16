@@ -15,7 +15,7 @@ import {
   FILTER_LABELS
 } from '../../constants';
 
-export default function Card({ id }) {
+export default function Card({ id, onTitleClick }) {
   const cardInfo = cardsData.find((c) => c.id === id) || {};
   const heading = cardInfo.preview?.heading || 'No Title';
   const bgUrl = cardInfo.image || '';
@@ -38,12 +38,12 @@ export default function Card({ id }) {
     margin: 0,
     fontFamily: FILTER_FONT_FAMILY,
     fontSize: `${FILTER_FONT_SIZE}px`,
-    fontStyle: 'normal',
     fontWeight: FILTER_FONT_WEIGHT,
     lineHeight: FILTER_LINE_HEIGHT,
     letterSpacing: FILTER_LETTER_SPACING,
     textTransform: 'uppercase',
-    color: '#fff'
+    color: '#fff',
+    cursor: 'pointer'
   };
 
   const filtersContainerStyle = {
@@ -54,7 +54,9 @@ export default function Card({ id }) {
 
   return (
     <div style={cardStyle}>
-      <h3 style={headingStyle}>{heading}</h3>
+      <h3 style={headingStyle} onClick={onTitleClick}>
+        {heading}
+      </h3>
       <div style={filtersContainerStyle}>
         {tags.map((tag) => {
           const filterStyle = {
@@ -64,7 +66,6 @@ export default function Card({ id }) {
             alignItems: 'center',
             fontFamily: FILTER_FONT_FAMILY,
             fontSize: `${FILTER_FONT_SIZE}px`,
-            fontStyle: 'normal',
             fontWeight: FILTER_FONT_WEIGHT,
             lineHeight: FILTER_LINE_HEIGHT,
             letterSpacing: FILTER_LETTER_SPACING,
